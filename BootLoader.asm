@@ -32,18 +32,32 @@ BPrint:
 	jmp _BPrintLoop
 	_BDone:
 	ret
+;=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ResetDisk:
+	pusha
+	mov ah, 0x00
+	mov dl, 0x00
+	int 0x13
+	jc _ResetErr
+	popa
+	ret
+	_ResetErr
+	
+;=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-LBAToCHS:						;AX = LBA
+;=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+LBAToCHS:							;AX = LBA
 	div word [bpbSectorsPerTrack]		;AX = LBA/SPT, DX = AbsoluteSector - 1
-	push dx					;Store sector on stack
+	push dx						;Store sector on stack
 	div word [bpbHeadsPerCylinder]	;AX = Cylinder, DX = head
-	pop bx					;store the sector into BX from stack
-	inc bx					;BX = Sector
+	pop bx						;store the sector into BX from stack
+	inc bx						;BX = Sector
 
-	mov ch, bl				;Lower 8 bits [First 8 bits of the cylinder] into the upper 8 bits of CH
-	mov cl, bh				;Upper 8 bits [Last 2 bits of the cylinder located here]
-	shl bl, 6					;move the bits over by six so 00000011 would look like 11000000
-	or cl, al					;CX should now be a proper 10 bit cylinder and 6 bit sector with dl as the head
+	mov ch, bl					;Lower 8 bits [First 8 bits of the cylinder] into the upper 8 bits of CH
+	mov cl, bh					;Upper 8 bits [Last 2 bits of the cylinder located here]
+	shl cl, 6						;move the bits over by six so 00000011 would look like 11000000
+	or cl, al						;CX should now be a proper 10 bit cylinder and 6 bit sector with dl as the head
 	mov dh, 0x00
 	xchg dh, dl
 	call ReadDisk
@@ -65,7 +79,7 @@ FindRootDir:
 	mov ax, word [bpbSectorsPerFAT]
 	mov bx, word [bpbNumberOfFATs]
 	mul bx
-	add ax, 1				;AX is now the starting sector of the root directory in LBA
+	add ax, 1					;AX is now the starting sector of the root directory in LBA
 	jmp LBAToCHS				;we now need to convert this into the CHS format 
 
 ReadDisk:
@@ -74,7 +88,7 @@ ReadDisk:
 	call BPrint
 	popa
 	mov ah, 0x02
-	mov bx, 0x7E00			;ES:BX 0x0000:0x7E00
+	mov bx, 0x7E00				;ES:BX 0x0000:0x7E00
 	int 0x13
 	jc _DiskReadError
 	mov cx, 0x0008
